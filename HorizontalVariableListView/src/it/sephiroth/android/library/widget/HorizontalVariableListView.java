@@ -25,21 +25,15 @@ import android.support.v4.widget.EdgeEffectCompat;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.util.SparseBooleanArray;
-import android.view.GestureDetector;
+import android.view.*;
 import android.view.GestureDetector.OnGestureListener;
-import android.view.Gravity;
-import android.view.HapticFeedbackConstants;
-import android.view.MotionEvent;
-import android.view.SoundEffectConstants;
-import android.view.VelocityTracker;
-import android.view.View;
-import android.view.ViewConfiguration;
-import android.view.ViewGroup;
-import android.view.ViewParent;
 import android.view.ViewTreeObserver.OnScrollChangedListener;
 import android.widget.AdapterView;
 import android.widget.ListAdapter;
 import android.widget.OverScroller;
+
+import java.lang.ref.WeakReference;
+import java.util.*;
 
 public class HorizontalVariableListView extends HorizontalListView {
 
@@ -547,12 +541,14 @@ public class HorizontalVariableListView extends HorizontalListView {
 		public void onChanged() {
 			mDataSetChange.invalidate();
 			handleDataSetChanged( mDataSetChange );
+            checkFocus();
 		}
 
 		@Override
 		public void onInvalidated() {
 			mDataSetChange.invalidate();
 			handleDataSetChanged( mDataSetChange );
+            checkFocus();
 		}
 	};
 
@@ -881,14 +877,68 @@ public class HorizontalVariableListView extends HorizontalListView {
 		}
 	}
 
-	/**
-	 * Fill list right.
-	 * 
-	 * @param positionX the position x
-	 * @param rightEdge the right edge
-	 */
-	private void fillListRight( int positionX, int rightEdge ) {
+    /**
+     * Indicates whether this view is in filter mode. Filter mode can for instance
+     * be enabled by a user when typing on the keyboard.
+     *
+     * @return True if the view is in filter mode, false otherwise.
+     */
+    boolean isInFilterMode() {
+        return false;
+    }
 
+    /**
+     * Update the status of the list based on the empty parameter.  If empty is true and
+     * we have an empty view, display it.  In all the other cases, make sure that the listview
+     * is VISIBLE and that the empty view is GONE (if it's not null).
+     */
+    private void updateEmptyStatus(boolean empty) {
+        if (isInFilterMode()) {
+            empty = false;
+        }
+
+        if (empty) {
+            if (getEmptyView() != null) {
+                getEmptyView().setVisibility(View.VISIBLE);
+                setVisibility(View.GONE);
+            } else {
+                // If the caller just removed our empty view, make sure the list view is visible
+                setVisibility(View.VISIBLE);
+            }
+
+            // We are now GONE, so pending layouts will not be dispatched.
+            // Force one here to make sure that the state of the list matches
+            // the state of the adapter.
+            if (mDataSetChange.changed()) {
+                this.onLayout(false, getLeft(), getTop(), getRight(), getBottom());
+            }
+        } else {
+            if (getEmptyView() != null) getEmptyView().setVisibility(View.GONE);
+            setVisibility(View.VISIBLE);
+        }
+    }
+
+    void checkFocus() {
+        final ListAdapter adapter = getAdapter();
+        final boolean empty = adapter == null || adapter.getCount() == 0;
+        final boolean focusable = !empty || isInFilterMode();
+        // The order in which we set focusable in touch mode/focusable may matter
+        // for the client, see View.setFocusableInTouchMode() comments for more
+        // details
+        super.setFocusableInTouchMode(focusable && isFocusableInTouchMode());
+        super.setFocusable(focusable && isFocusable());
+        if (getEmptyView() != null) {
+            updateEmptyStatus((adapter == null) || adapter.isEmpty());
+        }
+    }
+
+    /**
+     * Fill list right.
+     *
+     * @param positionX the position x
+     * @param rightEdge the right edge
+     */
+    private void fillListRight( int positionX, int rightEdge ) {
 		boolean firstChild = getChildCount() == 0 || mForceLayout;
 
 		if ( mAdapter == null ) return;
@@ -1798,7 +1848,6 @@ public class HorizontalVariableListView extends HorizontalListView {
 		if ( mIsDragging ) return false;
 
 		final int action = ev.getAction();
-		mGesture.onTouchEvent( ev );
 
 		/*
 		 * Shortcut the most recurring case: the user is in the dragging state and he is moving his finger. We want to intercept this
@@ -2331,11 +2380,11 @@ public class HorizontalVariableListView extends HorizontalListView {
 		return 0;
 	}
 
-	private void smoothScrollTo( int x ) {
+	public void smoothScrollTo( int x ) {
 		smoothScrollTo( x, SMOOTH_ANIMATION_DURATION );
 	}
 
-	private void smoothScrollTo( int x, int duration ) {
+    public void smoothScrollTo( int x, int duration ) {
 		smoothScrollBy( x - mCurrentX, duration );
 	}
 
@@ -2359,6 +2408,12 @@ public class HorizontalVariableListView extends HorizontalListView {
 	protected void onFinishedMovement() {
 		fireOnScrollFininshed();
 	}
+
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent ev) {
+        mGesture.onTouchEvent(ev);
+        return super.dispatchTouchEvent(ev);
+    }
 
 	private void itemClick( View child, int position ) {
 		boolean clickValid = true;
