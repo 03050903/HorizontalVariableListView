@@ -36,7 +36,7 @@ public class HorizontalVariableListView extends HorizontalListView implements On
 	public enum SelectionMode {
 		Single, Multiple
 	};
-	
+
 
 	public interface OnItemClickedListener {
 
@@ -447,6 +447,7 @@ public class HorizontalVariableListView extends HorizontalListView implements On
 				mAdapterItemCount = mAdapter.getCount();
 			}
 			Log.i( LOG_TAG, "onChanged(2): " + mAdapterItemCount );
+            checkFocus();
 			invalidate();
 			reset();
 		}
@@ -455,6 +456,7 @@ public class HorizontalVariableListView extends HorizontalListView implements On
 		public void onInvalidated() {
 			mAdapterItemCount = mAdapter.getCount();
 			Log.i( LOG_TAG, "onInvalidated(2): " + mAdapterItemCount );
+            checkFocus();
 			invalidate();
 			reset();
 		}
@@ -728,6 +730,61 @@ public class HorizontalVariableListView extends HorizontalListView implements On
 	public View getItemAt( int position ) {
 		return getChildAt( position - ( mLeftViewIndex + 1 ) );
 	}
+
+    /**
+     * Indicates whether this view is in filter mode. Filter mode can for instance
+     * be enabled by a user when typing on the keyboard.
+     *
+     * @return True if the view is in filter mode, false otherwise.
+     */
+    boolean isInFilterMode() {
+        return false;
+    }
+
+    /**
+     * Update the status of the list based on the empty parameter.  If empty is true and
+     * we have an empty view, display it.  In all the other cases, make sure that the listview
+     * is VISIBLE and that the empty view is GONE (if it's not null).
+     */
+    private void updateEmptyStatus(boolean empty) {
+        if (isInFilterMode()) {
+            empty = false;
+        }
+
+        if (empty) {
+            if (getEmptyView() != null) {
+                getEmptyView().setVisibility(View.VISIBLE);
+                setVisibility(View.GONE);
+            } else {
+                // If the caller just removed our empty view, make sure the list view is visible
+                setVisibility(View.VISIBLE);
+            }
+
+            // We are now GONE, so pending layouts will not be dispatched.
+            // Force one here to make sure that the state of the list matches
+            // the state of the adapter.
+            if (mDataChanged) {
+                this.onLayout(false, getLeft(), getTop(), getRight(), getBottom());
+            }
+        } else {
+            if (getEmptyView() != null) getEmptyView().setVisibility(View.GONE);
+            setVisibility(View.VISIBLE);
+        }
+    }
+
+    void checkFocus() {
+        final ListAdapter adapter = getAdapter();
+        final boolean empty = adapter == null || adapter.getCount() == 0;
+        final boolean focusable = !empty || isInFilterMode();
+        // The order in which we set focusable in touch mode/focusable may matter
+        // for the client, see View.setFocusableInTouchMode() comments for more
+        // details
+        super.setFocusableInTouchMode(focusable && isFocusableInTouchMode());
+        super.setFocusable(focusable && isFocusable());
+        if (getEmptyView() != null) {
+            updateEmptyStatus((adapter == null) || adapter.isEmpty());
+        }
+    }
 
 	@Override
 	public int getScreenPositionForView( View view ) {
