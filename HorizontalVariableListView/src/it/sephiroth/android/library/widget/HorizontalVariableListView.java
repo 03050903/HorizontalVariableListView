@@ -7,14 +7,6 @@
 
 package it.sephiroth.android.library.widget;
 
-import it.sephiroth.android.library.utils.DataSetObserverExtended;
-import java.lang.ref.WeakReference;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Hashtable;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Queue;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.database.DataSetObserver;
@@ -31,6 +23,7 @@ import android.view.ViewTreeObserver.OnScrollChangedListener;
 import android.widget.AdapterView;
 import android.widget.ListAdapter;
 import android.widget.OverScroller;
+import it.sephiroth.android.library.utils.DataSetObserverExtended;
 
 import java.lang.ref.WeakReference;
 import java.util.*;
@@ -127,7 +120,7 @@ public class HorizontalVariableListView extends HorizontalListView {
 		boolean onItemClick( AdapterView<?> parent, View view, int position, long id );
 	}
 
-	protected static boolean LOG_ENABLED = true;
+	protected static boolean LOG_ENABLED = false;
 
 	protected static final String LOG_TAG = "horizontal-variable-list";
 
