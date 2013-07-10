@@ -885,7 +885,7 @@ public class HorizontalVariableListView extends HorizontalListView {
      * we have an empty view, display it.  In all the other cases, make sure that the listview
      * is VISIBLE and that the empty view is GONE (if it's not null).
      */
-    private void updateEmptyStatus(boolean empty) {
+    public void updateEmptyStatus(boolean empty) {
         if (isInFilterMode()) {
             empty = false;
         }
